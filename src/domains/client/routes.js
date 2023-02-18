@@ -1,76 +1,103 @@
-//Express Router
 const express = require("express");
 const router = express.Router();
-const { google } = require("googleapis");
+const { Configuration, OpenAIApi } = require("openai");
+const configuration = new Configuration({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAIApi(configuration);
+const YoutubeMp3Downloader = require("youtube-mp3-downloader");
+const { Deepgram } = require("@deepgram/sdk");
+const ffmpeg = require("ffmpeg-static");
+const fs = require("fs");
 
-router.get("/captions", async (req, res) => {
+// Define a route that accepts a paragraph input
+router.post("/ask-chatgpt", async (req, res) => {
+  // Retrieve the input paragraph from the request body
+  const { input, instruction } = req.body;
+
   try {
-    // Parse the video ID from the YouTube URL
-    const videoUrl = req.query.videoUrl;
-    const videoId = videoUrl.split("v=")[1];
-
-    // Initialize the YouTube API client
-    const youtube = google.youtube({
-      version: "v3",
-      auth: "AIzaSyBGRtye-8euox4WyCxW4p1lKaJ0pj0aJJE",
+    const response = await openai.createEdit({
+      model: "text-davinci-edit-001",
+      input: input,
+      instruction: instruction,
     });
+    res
+      .status(200)
+      .json({ status: "Success", message: response.data.choices[0].text });
+  } catch (error) {
+    res.send(error);
+    if (error.response) {
+      console.log(error.response.status);
+      console.log(error.response.data);
+    } else {
+      console.log(error.message);
+    }
+    res.status(400).json({
+      success: false,
+      error: "Edit could not be generated, try again",
+    });
+  }
+});
+router.post("/ask-chatgpt-image", async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const response = await openai.createImage({
+      prompt: prompt,
+      n: 1,
+      size: "1024x1024",
+    });
+    image_url = response.data.data[0].url;
 
-    // Define the parameters for the API request
-    const params = {
-      part: "snippet",
-      videoId: videoId,
-      captions: true,
-    };
-
-    // Call the API to retrieve the caption tracks
-    const response = await youtube.captions.list(params);
-
-    // Find the caption track with the desired format (e.g. srt)
-    const caption = response.data.items.find(
-      (item) =>
-        item.kind === "youtube#caption" &&
-        item.snippet.trackKind === "standard" &&
-        item.snippet.format === "srt"
-    );
-
-    if (!caption) {
-      // No caption track found
-      res.json({ status: "Failed", message: "Caption track not found" });
-      return;
+    res.status(200).json({ success: true, imageURL: image_url });
+  } catch (error) {
+    if (error.response) {
+      console.log(error.response.status);
+      console.log(error.response.data);
+    } else {
+      console.log(error.message);
     }
 
-    // Download the caption track
-    const downloadResponse = await youtube.captions.download(
-      {
-        id: caption.id,
-        tfmt: "srt",
-      },
-      { responseType: "stream" }
-    );
-
-    // Create a buffer to store the caption data
-    let captionBuffer = Buffer.alloc(0);
-
-    // Read the caption data from the response stream
-    downloadResponse.data.on("data", (chunk) => {
-      captionBuffer = Buffer.concat([captionBuffer, chunk]);
+    res.status(400).json({
+      success: false,
+      error: "Edit could not be generated, try again",
     });
-
-    downloadResponse.data.on("end", () => {
-      // Convert the caption data to a string
-      const captions = captionBuffer.toString("utf8");
-
-      // Send the captions as a JSON response
-      res.json({ status: "Success", captions: captions });
-    });
-  } catch (err) {
-    // Handle any errors that occur
-    console.error(err);
-    res.json({ status: "Failed", message: err.message });
   }
 });
 
-module.exports = router;
-
-//Passport
+router.post("/caption", async (req, res) => {
+  try {
+    const deepgram = new Deepgram(process.env.DG_KEY);
+    const YD = new YoutubeMp3Downloader({
+      ffmpegPath: ffmpeg,
+      outputPath: "./",
+      youtubeVideoQuality: "highestaudio",
+    });
+    YD.download("ir-mWUYH_uo");
+    YD.on("progress", (data) => {
+      console.log(data.progress.percentage + "% downloaded");
+    });
+    YD.on("finished", async (err, video) => {
+      const videoFileName = video.file;
+      const file = {
+        buffer: fs.readFileSync(videoFileName),
+        mimetype: "audio/mp3",
+      };
+      const options = {
+        punctuate: true,
+      };
+      const result = await deepgram.transcription
+        .preRecorded(file, options)
+        .catch((e) => console.log(e));
+      const transcript = result.results.channels[0].alternatives[0].transcript;
+      res.json({
+        message: "Success",
+        videoText: transcript,
+      });
+    });
+  } catch (error) {
+    // Handle any errors that may occur
+    console.error(error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while processing your request." });
+  }
+});
 module.exports = router;
