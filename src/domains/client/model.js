@@ -1,19 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ClientSchema = new Schema({
-  username: {
-    type: String,
-    require: true,
-    min: 4,
-    max: 26,
-  },
-  firstName: {
-    type: String,
-    require: true,
-    min: 4,
-    max: 26,
-  },
-  lastName: {
+  fullname: {
     type: String,
     require: true,
     min: 4,
@@ -25,10 +13,7 @@ const ClientSchema = new Schema({
     min: 6,
     max: 256,
   },
-  phone: {
-    type: Number,
-    require: true,
-  },
+
   password: {
     type: String,
     require: true,

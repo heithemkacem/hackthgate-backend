@@ -8,7 +8,7 @@ const {
 const jwt = require("jsonwebtoken");
 const CreateClient = async (data) => {
   try {
-    const { username, firstName, lastName, email, phone, password } = data;
+    const { fullname, email, password } = data;
     const existingClient = await Client.findOne({ email: email });
     if (existingClient != null) {
       //A user aleady exist
@@ -19,11 +19,8 @@ const CreateClient = async (data) => {
       //Hashing Password
       const hashedPassword = await hashData(password);
       const newClient = new Client({
-        username,
-        firstName,
-        lastName,
+        fullname,
         email,
-        phone,
         password: hashedPassword,
         verified: false,
         role: ROLES.CLIENT,

@@ -22,18 +22,15 @@ passport.use(strategy);
 
 //! Client Inscription
 router.post("/signup", async (req, res) => {
-  const { username, firstName, lastName, email, phone, password } = req.body;
+  const { fullname, email, password } = req.body;
   try {
     const { error } = clientRegisterValidation(req.body);
     if (error) {
       res.send({ status: "Failed", message: error["details"][0]["message"] });
     } else {
       const createdClient = await CreateClient({
-        username,
-        firstName,
-        lastName,
+        fullname,
         email,
-        phone,
         password,
       });
       await sendOTPVerificationEmail(createdClient);
