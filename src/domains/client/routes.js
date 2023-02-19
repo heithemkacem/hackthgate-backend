@@ -24,13 +24,15 @@ router.post(
     // Generate a response from the OpenAI API using the `create` method
     try {
       const response = await openai.createCompletion({
-        model: "text-davinci-002",
+        model: "text-babbage-001",
         prompt: ` ${prompt}`,
         temperature: 0.2,
+        max_tokens: 2000,
       });
-      res
-        .status(200)
-        .json({ status: "Success", response: response.data.choices[0].text });
+      res.status(200).json({
+        status: "Success",
+        response: response.data.choices[0].text.toString(),
+      });
     } catch (error) {
       res.status(500).json({ status: "Failed", error: error.message });
     }
@@ -111,10 +113,10 @@ router.get(
   async (req, res) => {
     const options = {
       method: "GET",
-      url: "https://tiktok-all-in-one.p.rapidapi.com/feed",
+      url: process.env.RAPID_API_URL,
       headers: {
         "X-RapidAPI-Key": API_KEY,
-        "X-RapidAPI-Host": "tiktok-all-in-one.p.rapidapi.com",
+        "X-RapidAPI-Host": process.env.RAPID_API_HOST,
       },
     };
 
@@ -135,16 +137,18 @@ router.post("/ocr", async (req, res) => {
   try {
     // Create a new instance of the Mindee API client with your API key
     const mindeeClient = new mindee.Client({
-      apiKey: "cb34ce0c1b3eea38766de718a20733f1",
+      apiKey: process.env.MINDEE_API_KEY,
     }).addEndpoint({
-      accountName: "whitecape",
-      endpointName: "image",
+      accountName: process.env.MINDEE_ACCOUNT_NAME,
+      endpointName: process.env.MINDEE_ENDPOINT_NAME,
     });
 
     // Load the image from the provided URL and parse it using the CustomV1 parser
     const apiResponse = await mindeeClient
       .docFromUrl(imageURL)
-      .parse(mindee.CustomV1, { endpointName: "image" });
+      .parse(mindee.CustomV1, {
+        endpointName: process.env.MINDEE_ENDPOINT_NAME,
+      });
     // Check if the parsed data is available and send it in the response
     if (apiResponse.document !== undefined) {
       const parsedText = apiResponse.document.toString();
