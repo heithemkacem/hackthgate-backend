@@ -13,16 +13,7 @@ router.use(passport.initialize());
 passport.use(strategy);
 const API_KEY = process.env.RAPID_API_KEY;
 const axios = require("axios");
-const multer = require("multer");
 const mindee = require("mindee");
-
-const upload = multer({ dest: "uploads/" });
-const mindeeClient = new mindee.Client({
-  apiKey: "cb34ce0c1b3eea38766de718a20733f1",
-}).addEndpoint({
-  accountName: "whitecape",
-  endpointName: "image",
-});
 
 router.post(
   "/ask-chatgpt",
@@ -139,39 +130,34 @@ router.get(
       });
   }
 );
-router.post(
-  "/upload",
-  upload.single("C:UsersMSIPicturesmindeeImage-containing-text.png"),
-  (req, res) => {
-    if (!req.file || !req.file.path) {
-      res.status(400).send("File not found.");
-      return;
+router.post("/ocr", async (req, res) => {
+  const { imageURL } = req.body;
+  try {
+    // Create a new instance of the Mindee API client with your API key
+    const mindeeClient = new mindee.Client({
+      apiKey: "cb34ce0c1b3eea38766de718a20733f1",
+    }).addEndpoint({
+      accountName: "whitecape",
+      endpointName: "image",
+    });
+
+    // Load the image from the provided URL and parse it using the CustomV1 parser
+    const apiResponse = await mindeeClient
+      .docFromUrl(imageURL)
+      .parse(mindee.CustomV1, { endpointName: "image" });
+    // Check if the parsed data is available and send it in the response
+    if (apiResponse.document !== undefined) {
+      const parsedText = apiResponse.document.toString();
+      res.json({ status: "Success", data: parsedText });
+    } else {
+      res.json({ status: "Failed", message: "Failed to parse image" });
     }
-
-    const filePath = req.file.path;
-
-    mindeeClient
-      .docFromPath(filePath)
-      .parse(mindee.CustomV1, { endpointName: "image" })
-      .then((resp) => {
-        if (resp.document === undefined) {
-          res.status(400).send("Failed to parse document.");
-          return;
-        }
-
-        // full object
-        console.log(resp.document);
-
-        // string summary
-        console.log(resp.document.toString());
-
-        res.send(resp.document.toString());
-      })
-      .catch((err) => {
-        console.error(err);
-        res.status(500).send("Failed to parse document.");
-      });
+  } catch (error) {
+    console.error(error);
+    res.json({
+      status: "Failed",
+      message: "Failed to perform OCR on the image",
+    });
   }
-);
-
+});
 module.exports = router;
