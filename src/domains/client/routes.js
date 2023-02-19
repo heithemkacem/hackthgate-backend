@@ -13,6 +13,17 @@ router.use(passport.initialize());
 passport.use(strategy);
 const API_KEY = process.env.RAPID_API_KEY;
 const axios = require("axios");
+const multer = require("multer");
+const mindee = require("mindee");
+
+const upload = multer({ dest: "uploads/" });
+const mindeeClient = new mindee.Client({
+  apiKey: "cb34ce0c1b3eea38766de718a20733f1",
+}).addEndpoint({
+  accountName: "whitecape",
+  endpointName: "image",
+});
+
 router.post(
   "/ask-chatgpt",
   passport.authenticate("jwt", { session: false }),
@@ -24,8 +35,7 @@ router.post(
       const response = await openai.createCompletion({
         model: "text-davinci-002",
         prompt: ` ${prompt}`,
-        model: "text-davinci-002",
-        temperature: 0.5,
+        temperature: 0.2,
       });
       res
         .status(200)
@@ -126,6 +136,40 @@ router.get(
       })
       .catch(function (error) {
         console.error(error);
+      });
+  }
+);
+router.post(
+  "/upload",
+  upload.single("C:UsersMSIPicturesmindeeImage-containing-text.png"),
+  (req, res) => {
+    if (!req.file || !req.file.path) {
+      res.status(400).send("File not found.");
+      return;
+    }
+
+    const filePath = req.file.path;
+
+    mindeeClient
+      .docFromPath(filePath)
+      .parse(mindee.CustomV1, { endpointName: "image" })
+      .then((resp) => {
+        if (resp.document === undefined) {
+          res.status(400).send("Failed to parse document.");
+          return;
+        }
+
+        // full object
+        console.log(resp.document);
+
+        // string summary
+        console.log(resp.document.toString());
+
+        res.send(resp.document.toString());
+      })
+      .catch((err) => {
+        console.error(err);
+        res.status(500).send("Failed to parse document.");
       });
   }
 );
