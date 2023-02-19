@@ -26,13 +26,11 @@ router.post(
         model: "text-davinci-002",
         temperature: 0.5,
       });
-
-      console.log(response.data.choices[0].text);
       res
         .status(200)
-        .json({ success: true, response: response.data.choices[0].text });
+        .json({ status: "Success", response: response.data.choices[0].text });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ status: "Failed", error: error.message });
     }
   }
 );
@@ -50,11 +48,11 @@ router.post(
       });
       image_url = response.data.data[0].url;
 
-      res.status(200).json({ success: true, imageURL: image_url });
+      res.status(200).json({ status: "Success", imageURL: image_url });
     } catch (error) {
       console.log(error.message);
       res.status(400).json({
-        success: false,
+        status: "Failed",
         error: "Edit could not be generated, try again",
       });
     }
@@ -92,7 +90,7 @@ router.post(
         const transcript =
           result.results.channels[0].alternatives[0].transcript;
         res.json({
-          message: "Success",
+          status: "Success",
           videoText: transcript,
         });
       });
