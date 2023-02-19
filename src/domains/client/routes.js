@@ -11,7 +11,8 @@ const passport = require("passport");
 const { strategy } = require("./../../security/strategy");
 router.use(passport.initialize());
 passport.use(strategy);
-
+const API_KEY = process.env.RAPID_API_KEY;
+const axios = require("axios");
 router.post(
   "/ask-chatgpt",
   passport.authenticate("jwt", { session: false }),
@@ -103,4 +104,30 @@ router.post(
     }
   }
 );
+router.get(
+  "/trending",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const options = {
+      method: "GET",
+      url: "https://tiktok-all-in-one.p.rapidapi.com/feed",
+      headers: {
+        "X-RapidAPI-Key": API_KEY,
+        "X-RapidAPI-Host": "tiktok-all-in-one.p.rapidapi.com",
+      },
+    };
+
+    axios
+      .request(options)
+      .then(function (response) {
+        //const trendingVideos = response.data.items.slice(0, 10);
+        //get only the first 10 videos from the response data
+        res.status(200).json({ status: "Success", videos: response.data });
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+  }
+);
+
 module.exports = router;
