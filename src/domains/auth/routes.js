@@ -15,10 +15,6 @@ const {
   ResetPassword,
 } = require("./controller");
 //Passport
-const passport = require("passport");
-const { strategy } = require("./../../security/strategy");
-router.use(passport.initialize());
-passport.use(strategy);
 
 //! Client Inscription
 router.post("/signup", async (req, res) => {
