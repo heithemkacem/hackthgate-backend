@@ -7,7 +7,6 @@ const YoutubeMp3Downloader = require("youtube-mp3-downloader");
 const { Deepgram } = require("@deepgram/sdk");
 const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
-const flatted = require("flatted");
 
 router.post("/ask-chatgpt", async (req, res) => {
   const { prompt } = req.body;
@@ -16,20 +15,21 @@ router.post("/ask-chatgpt", async (req, res) => {
   try {
     const response = await openai.createCompletion({
       model: "text-davinci-002",
-      prompt: `create or search how to ${prompt}`,
+      prompt: ` ${prompt}`,
       model: "text-davinci-002",
       temperature: 0.5,
     });
 
     console.log(response.data.choices[0].text);
-    const serializedResponse = flatted.stringify(response.data.choices[0].text);
-    res.status(200).json({ success: true, response: serializedResponse });
+    res
+      .status(200)
+      .json({ success: true, response: response.data.choices[0].text });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-router.post("/ask-chatgpt-image", async (req, res) => {
+router.post("/get-ai-image", async (req, res) => {
   const { prompt } = req.body;
   try {
     const response = await openai.createImage({
@@ -50,6 +50,7 @@ router.post("/ask-chatgpt-image", async (req, res) => {
 });
 
 router.post("/caption", async (req, res) => {
+  const { videoID } = req.body;
   try {
     const deepgram = new Deepgram(process.env.DG_KEY);
     const YD = new YoutubeMp3Downloader({
@@ -57,7 +58,7 @@ router.post("/caption", async (req, res) => {
       outputPath: "./",
       youtubeVideoQuality: "highestaudio",
     });
-    YD.download("ir-mWUYH_uo");
+    YD.download(videoID);
     YD.on("progress", (data) => {
       console.log(data.progress.percentage + "% downloaded");
     });
