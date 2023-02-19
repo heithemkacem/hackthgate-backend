@@ -7,35 +7,28 @@ const YoutubeMp3Downloader = require("youtube-mp3-downloader");
 const { Deepgram } = require("@deepgram/sdk");
 const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
+const flatted = require("flatted");
 
-// Define a route that accepts a paragraph input
 router.post("/ask-chatgpt", async (req, res) => {
-  // Retrieve the input paragraph from the request body
-  const { input, instruction } = req.body;
+  const { prompt } = req.body;
 
+  // Generate a response from the OpenAI API using the `create` method
   try {
-    const response = await openai.createEdit({
-      model: "text-davinci-edit-001",
-      input: input,
-      instruction: instruction,
+    const response = await openai.createCompletion({
+      model: "text-davinci-002",
+      prompt: `create or search how to ${prompt}`,
+      model: "text-davinci-002",
+      temperature: 0.5,
     });
-    res
-      .status(200)
-      .json({ status: "Success", message: response.data.choices[0].text });
+
+    console.log(response.data.choices[0].text);
+    const serializedResponse = flatted.stringify(response.data.choices[0].text);
+    res.status(200).json({ success: true, response: serializedResponse });
   } catch (error) {
-    res.send(error);
-    if (error.response) {
-      console.log(error.response.status);
-      console.log(error.response.data);
-    } else {
-      console.log(error.message);
-    }
-    res.status(400).json({
-      success: false,
-      error: "Edit could not be generated, try again",
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
+
 router.post("/ask-chatgpt-image", async (req, res) => {
   const { prompt } = req.body;
   try {
@@ -48,13 +41,7 @@ router.post("/ask-chatgpt-image", async (req, res) => {
 
     res.status(200).json({ success: true, imageURL: image_url });
   } catch (error) {
-    if (error.response) {
-      console.log(error.response.status);
-      console.log(error.response.data);
-    } else {
-      console.log(error.message);
-    }
-
+    console.log(error.message);
     res.status(400).json({
       success: false,
       error: "Edit could not be generated, try again",
